@@ -1,7 +1,7 @@
 import pygame
 pygame.init()
 
-# set up pygame game
+# Inicializando Pygame
 WIDTH = 1800
 HEIGHT = 900
 TILE_SIZE = 100
@@ -9,13 +9,13 @@ screen = pygame.display.set_mode([WIDTH, HEIGHT])
 pygame.display.set_caption('Sem Nome')
 fps = 60
 timer = pygame.time.Clock()
-# fonte = pygame.font.Font('freesansbold.ttf', 20)
+# Fonte = pygame.font.Font('freesansbold.ttf', 20)
 active_level = 0
 active_phase = 3
 level = [[0 for _ in range(18)] for _ in range(7)]
 level.append([2 for _ in range(18)])
 level.append([1 for _ in range(18)])
-# carrega img
+# Carrega img
 bg = pygame.image.load('assets/images/space bg.png')
 rock = pygame.transform.scale(pygame.image.load('assets/images/tiles/rock.png'), (100, 100))
 ground = pygame.transform.scale(pygame.image.load('assets/images/tiles/ground.png'), (100, 100))
@@ -40,7 +40,7 @@ for _ in range(1, 5):
                                          (5 * player_scale, 8 * player_scale)))
 
 
-# desenha inventário
+# Desenha inventário
 def draw_inventory():
     font = pygame.font.Font('freesansbold.ttf', 20)
     colors = ['blue', 'green', 'red', 'yellow']
@@ -50,10 +50,10 @@ def draw_inventory():
     pygame.draw.rect(screen, 'white', [348, HEIGHT - 117, 532, 104], 3, 5)
     pygame.draw.rect(screen, 'white', [880, HEIGHT - 117, 910, 104], 3, 5)
     font.italic = True
-    inst_text = font.render('Left/Right Click On Spaces', True, 'white')
-    inst_text2 = font.render('Or Scroll Wheel', True, 'white')
-    inst_text3 = font.render('Press Enter to Print to Console', True, 'white')
-    inst_text4 = font.render('Then Copy to Levels.py', True, 'white')
+    inst_text = font.render('Esquerda/Direita / Click Space', True, 'white')
+    inst_text2 = font.render('Ou gire o scroll', True, 'white')
+    inst_text3 = font.render('Pressione Enter pra Printar', True, 'white')
+    inst_text4 = font.render('E copie os níveis.py', True, 'white')
     screen.blit(inst_text, (14, HEIGHT - 113))
     screen.blit(inst_text2, (14, HEIGHT - 88))
     screen.blit(inst_text3, (14, HEIGHT - 63))
@@ -82,7 +82,7 @@ def draw_inventory():
     return [plus_lvl, minus_lvl, plus_phase, minus_phase]
 
 
-# quadros
+# Quadros
 def draw_board(board):
     # below ground - 1, walkable ground - 2, platform - 3, acid - 4, 5 - spawn  point, 6-9 keys, 10-13 portals
     for q in range(len(board)):
@@ -101,7 +101,7 @@ def draw_board(board):
                     screen.blit(doors[value - 10], (j * TILE_SIZE, q * TILE_SIZE))
 
 
-# main game loop
+# Main game loop
 run = True
 while run:
     timer.tick(fps)
@@ -112,7 +112,7 @@ while run:
     draw_board(level)
     buttons = draw_inventory()
 
-    # event handling
+    # Eventos
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
