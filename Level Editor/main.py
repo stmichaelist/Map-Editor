@@ -34,15 +34,16 @@ tiles = ['', rock, ground, platform, acid, '', blue_key, green_key, red_key, yel
 
 # Definir o mapa do nível (copie do Level Editor)
 level_map = [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 3, 0, 1, 0, 0, 0, 0, 0, 10, 0, 0, 0],
-    [0, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 3, 0, 0, 3, 0, 0, 0],
-    [5, 0, 5, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 1],
+[1, 0, 0, 0, 1, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+[1, 0, 0, 3, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1],
+[1, 3, 0, 0, 1, 4, 4, 4, 0, 0, 0, 0, 0, 4, 4, 4, 11, 1],
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+
 ]
 
 # Função para desenhar o mapa
@@ -53,7 +54,14 @@ def draw_map():
             if tile_type != 0:
                 tile_image = tiles[tile_type]
                 if tile_image:  # Verifica se o tile não está vazio
-                    screen.blit(tile_image, (col * TILE_SIZE, row * TILE_SIZE))
+                    x = col * TILE_SIZE
+                    y = row * TILE_SIZE
+                    
+                    # Ajustar a posição do ácido
+                    if tile_type == 4:  # 4 representa o ácido no seu mapa
+                        y += TILE_SIZE - acid.get_height()  # Ajusta para alinhar embaixo
+                    screen.blit(tile_image, (x, y))
+
 
 # Função principal
 def main():
