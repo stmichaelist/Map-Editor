@@ -63,8 +63,9 @@ def load():
 
 
 def update(dt):
-    global vel_y, vel_x, is_Running, RunningCoolDown, player_anim_frame, playerpos_x, playerpos_y, player_anim_time, old_x, old_y,  gravity
+    global vel_y, vel_x, is_Running, RunningCoolDown, player_anim_frame, playerpos_x, playerpos_y, player_anim_time, old_x, old_y, gravity, collider_jogador
     old_x= playerpos_x
+    old_y= playerpos_y
     keys = pygame.key.get_pressed()
 
     # Aplicar gravidade ao jogador
@@ -80,6 +81,36 @@ def update(dt):
             if player_anim_frame > 3:  # loop da animação
                 player_anim_frame = 0
             player_anim_time = 0  # reinicializa a contagem do tempo
+
+    if keys[pygame.K_LSHIFT]:
+        if(is_Running == False and RunningCoolDown > 200):
+            vel_x = 2*vel_x
+            is_Running = True
+            RunningCoolDown = 0
+        elif (is_Running == True) and RunningCoolDown > 200:
+            vel_x = vel_x/2
+            is_Running = False
+            RunningCoolDown = 0
+        
+
+    if keys[pygame.K_LEFT]:
+        if player_anim_frame < 5:
+            player_anim_frame = 5
+        playerpos_x -= vel_x * dt
+        player_anim_time += dt
+        if player_anim_time > 100:
+            player_anim_frame += 1
+            if player_anim_frame > 7:
+                player_anim_frame = 5
+            player_anim_time = 0
+
+    # Fazer o jogador pular ao pressionar a seta para cima, se estiver no chão
+    if keys[pygame.K_UP] and is_jumping == False:
+        vel_y = -7  # Ajuste a velocidade de pulo conforme necessário
+        playerpos_y += vel_y - gravity 
+        is_jumping = True
+    
+    collider_jogador = pygame.Rect(playerpos_x + 40, playerpos_y + 60, 40, 60)
 
 # Função para desenhar o mapa
 def draw_map(screen):
