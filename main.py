@@ -76,11 +76,11 @@ def handle_move(player):
 
 
 def load():
-    global bg,clock, rock, ground, platform, acid, blue_key, green_key, red_key, yellow_key, blue_door, green_door, red_door, yellow_door, tiles, level_map
+    global bg,clock, rock, ground, platform, acid, blue_key, green_key, red_key, yellow_key, blue_door, green_door, red_door, yellow_door, tiles, level_map,sys_font
     clock = pygame.time.Clock()
 # Carregar imagens (Exemplo com tiles, adicione o caminho correto)
     bg = pygame.image.load('assets/images/space bg.png')
-
+    sys_font = pygame.font.Font("assets/fonts/fonte.ttf", 30)
     rock = pygame.transform.scale(pygame.image.load('assets/images/tiles/rock.png'), (100, 100))
     ground = pygame.transform.scale(pygame.image.load('assets/images/tiles/ground.png'), (100, 100))
     platform = pygame.transform.scale(pygame.image.load('assets/images/tiles/platform.png'), (100, 50))
@@ -153,6 +153,38 @@ def draw_map(screen):
                         y += TILE_SIZE - acid.get_height()  # Ajusta para alinhar embaixo
                     screen.blit(tile_image, (x, y))
 
+def draw_button(screen, text, x, y, width_button, height_button, color, hover_color):
+    mouse_x, mouse_y = pygame.mouse.get_pos()
+    button_rect = pygame.Rect(x, y, width_button, height_button)
+
+
+    if button_rect.collidepoint(mouse_x, mouse_y):
+        color = hover_color  
+
+    pygame.draw.rect(screen, color, button_rect, border_radius=10)
+    
+    start = sys_font.render(text, True, (255, 255,255 ))  
+    text_rect = start.get_rect(center=button_rect.center)
+    screen.blit(start, text_rect)
+
+    return button_rect  
+
+
+def show_start_screen(screen):
+    running = True
+    while running:
+        draw_map(screen)
+
+        button_rect = draw_button(screen, "Start", WIDTH // 2 - 150 // 2, 150,  150, 75, (25, 177, 76),(0, 255, 0))    
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False  # Encerra o jogo
+            elif event.type == pygame.MOUSEBUTTONDOWN and button_rect.collidepoint(event.pos):
+                return True  # Começa o jogo
+
+        pygame.display.update()
+
 # Função principal
 def main(screen):
     global clock
@@ -189,5 +221,6 @@ def main(screen):
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 load()
-main(screen)
+if show_start_screen(screen):  # Exibe a tela de início
+    main(screen)
 pygame.quit()
