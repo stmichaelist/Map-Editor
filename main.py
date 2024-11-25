@@ -87,7 +87,7 @@ class Player(pygame.sprite.Sprite):
         self.update_sprite()
     
     def update_sprite(self):
-        sprite_sheet = "Idle"
+        sprite_sheet = "astronaut"
         if self.vel_x != 0:
             sprite_sheet ="Walk"
 
