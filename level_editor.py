@@ -35,9 +35,7 @@ keys = [blue_key, green_key, red_key, yellow_key]
 doors = [blue_door, green_door, red_door, yellow_door]
 frames = []
 player_scale = 14
-for _ in range(1, 5):
-    frames.append(pygame.transform.scale(pygame.image.load(f'assets/images/astronaut/{_}.png'),
-                                         (5 * player_scale, 8 * player_scale)))
+frames.append(pygame.transform.scale(pygame.image.load(f'assets/images/astronaut/astronaut.png'),(64, 64)))
 
 
 # Desenha inventário
