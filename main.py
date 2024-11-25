@@ -5,11 +5,7 @@ import sys
 pygame.init()
 player_walk = []
 player_anim_frame = 1
-playerpos_x, playerpos_y = 100, 650
 player_anim_time = 0
-gravity = 0.5
-vel_y = 0
-vel_x = 0.2
 RunningCoolDown = 0
 # Definindo o tamanho dos tiles e da tela
 TILE_SIZE = 100
@@ -18,7 +14,66 @@ HEIGHT = 900
 screen = pygame.display.set_mode([WIDTH, HEIGHT])
 pygame.display.set_caption('Sem Nome')
 fps = 60
+PLAYER_VEL = 20
 timer = pygame.time.Clock()
+is_jumping = False
+is_Running = False
+
+class Player(pygame.sprite.Sprite):
+    COLOR = (255, 0, 0)
+    GRAVITY = 5
+
+    def __init__(self, x, y, width, height):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.vel_x = 0
+        self.vel_y = 0
+        self.mask = None
+        self.direction = "left"
+        self.animation_count = 0
+        self.fall_count = 0
+    
+    def move(self, dx, dy):
+        self.rect.x += dx
+        self.rect.y += dy
+
+    def move_left(self, vel):
+        self.vel_x = -vel
+        if self.direction != "left":
+            self.direction = "left"
+            self.animation_count = 0
+    
+    def move_right(self, vel):
+        self.vel_x = vel
+        if self.direction != "right":
+            self.direction = "right"
+            self.animation_count = 0
+
+    def loop(self, fps):
+        self.vel_y += min(1,(self.fall_count/fps) * self.GRAVITY)
+        self.move(self.vel_x, self.vel_y)
+
+        self.fall_count += 1
+    
+    def draw(self, win):
+        pygame.draw.rect(win, self.COLOR, self.rect)
+
+def draw(screen, player):
+
+
+    player.draw(screen)
+
+    pygame.display.update()
+
+def handle_move(player):
+    keys = pygame.key.get_pressed()
+
+    player.vel_x = 0
+    if keys[pygame.K_LEFT]:
+        player.move_left(PLAYER_VEL)
+    if keys[pygame.K_RIGHT]:
+        player.move_right(PLAYER_VEL)
+
+
 
 def load():
     global bg,clock, rock, ground, platform, acid, blue_key, green_key, red_key, yellow_key, blue_door, green_door, red_door, yellow_door, tiles, level_map
@@ -61,56 +116,26 @@ def load():
         image = pygame.transform.scale(image, (50, 50))  # ajuste para o tamanho desejado
         player_walk.append(image)
 
+def col_vert(player, objects, dy):
+    collided_objects = []
+    for obj in objects:
+        if pygame.sprite.collide_mask(player, obj):
+            if dy > 0:
+                player.rect.bottom = obj.rect.top
+                player.landed()
+            elif dy <0:
+                player.rect.top = obj.rect.bottom
+                player.hit_head()
+        collided_objects.append(obj)
+
+        return collided_objects
+
 
 def update(dt):
-    global vel_y, vel_x, is_Running, RunningCoolDown, player_anim_frame, playerpos_x, playerpos_y, player_anim_time, old_x, old_y, gravity, collider_jogador
-    old_x= playerpos_x
-    old_y= playerpos_y
-    keys = pygame.key.get_pressed()
+    global is_Running, RunningCoolDown, player_anim_frame, player_anim_time, gravity, is_jumping
 
     # Aplicar gravidade ao jogador
-    vel_y += gravity
     RunningCoolDown += dt
-
-    # Movimento lateral do jogador
-    if keys[pygame.K_RIGHT]:
-        playerpos_x += vel_x * dt
-        player_anim_time += dt  # incrementa o tempo usando dt
-        if player_anim_time > 100:  # quando acumular mais de 100 ms
-            player_anim_frame += 1  # avança para o próximo frame
-            if player_anim_frame > 3:  # loop da animação
-                player_anim_frame = 0
-            player_anim_time = 0  # reinicializa a contagem do tempo
-
-    if keys[pygame.K_LSHIFT]:
-        if(is_Running == False and RunningCoolDown > 200):
-            vel_x = 2*vel_x
-            is_Running = True
-            RunningCoolDown = 0
-        elif (is_Running == True) and RunningCoolDown > 200:
-            vel_x = vel_x/2
-            is_Running = False
-            RunningCoolDown = 0
-        
-
-    if keys[pygame.K_LEFT]:
-        if player_anim_frame < 5:
-            player_anim_frame = 5
-        playerpos_x -= vel_x * dt
-        player_anim_time += dt
-        if player_anim_time > 100:
-            player_anim_frame += 1
-            if player_anim_frame > 7:
-                player_anim_frame = 5
-            player_anim_time = 0
-
-    # Fazer o jogador pular ao pressionar a seta para cima, se estiver no chão
-    if keys[pygame.K_UP] and is_jumping == False:
-        vel_y = -7  # Ajuste a velocidade de pulo conforme necessário
-        playerpos_y += vel_y - gravity 
-        is_jumping = True
-    
-    collider_jogador = pygame.Rect(playerpos_x + 40, playerpos_y + 60, 40, 60)
 
 # Função para desenhar o mapa
 def draw_map(screen):
@@ -127,22 +152,26 @@ def draw_map(screen):
                     if tile_type == 4:  # 4 representa o ácido no seu mapa
                         y += TILE_SIZE - acid.get_height()  # Ajusta para alinhar embaixo
                     screen.blit(tile_image, (x, y))
-    screen.blit(player_walk[player_anim_frame],(playerpos_x,playerpos_y))
 
 # Função principal
 def main(screen):
     global clock
     running = True
+    player = Player(100, 10, 50, 50)
     while running:
         screen.fill('black')  # Limpa a tela com a cor preta
         
         # Desenha o fundo na tela
         screen.blit(bg, (0, 0))  # Desenha a imagem do fundo na posição (0, 0)
-        clock.tick(60)
+        clock.tick(fps)
         dt = clock.get_time()
         update(dt)
+
+        player.loop(fps)
+        handle_move(player)
         # Desenha o mapa com os tiles
         draw_map(screen)
+        draw(screen, player)
         pygame.display.update()
 
         # Evento de fechar a janela
