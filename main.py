@@ -74,8 +74,14 @@ class Player(pygame.sprite.Sprite):
         self.animation_count = 0
         self.fall_count = 0
         self.jump_count = 0
-        self.key_count = 0
-    
+        self.keys = []  
+        self.key_counts = {
+            'blue': 0,
+            'green': 0,
+            'red': 0,
+            'yellow': 0
+        }
+        
     def jump(self):
         self.vel_y = -self.GRAVITY * 2.3
         self.animation_count = 0
@@ -115,6 +121,22 @@ class Player(pygame.sprite.Sprite):
     def hit_head(self):
         self.count = 0
         self.vel_y *= -1
+        
+    def collect_key(self, key_type):
+        # Verifica se a chave já foi coletada, se não, incrementa o contador
+        if key_type == 6 and key_type not in self.keys:  # Azul
+            self.key_counts['blue'] += 1
+            self.keys.append(key_type)
+        elif key_type == 7 and key_type not in self.keys:  # Verde
+            self.key_counts['green'] += 1
+            self.keys.append(key_type)
+        elif key_type == 8 and key_type not in self.keys:  # Vermelha
+            self.key_counts['red'] += 1
+            self.keys.append(key_type)
+        elif key_type == 9 and key_type not in self.keys:  # Amarela
+            self.key_counts['yellow'] += 1
+            self.keys.append(key_type)
+        print(f"Chaves coletadas - Azul: {self.key_counts['blue']}, Verde: {self.key_counts['green']}, Vermelha: {self.key_counts['red']}, Amarela: {self.key_counts['yellow']}")
 
     def update_sprite(self):
         sprite_sheet = "astronaut"
@@ -150,6 +172,7 @@ def handle_vertical_collision(player, objects, dy):
 
     for obj in objects:
         if not hasattr(obj, 'mask') or obj.mask is None:
+            # Ignora objetos sem máscara
             continue
 
         if pygame.sprite.collide_mask(player, obj):  # Verifica a colisão de máscara
@@ -161,25 +184,6 @@ def handle_vertical_collision(player, objects, dy):
                 player.hit_head()
             
             collided_objects.append(obj)
-
-            # Lógica para lidar com tiles do tipo "Key"
-            if obj.type in [6, 7, 8, 9]:  # Tipos de Key
-                player.key_count += 1
-                objects.remove(obj)  # Remove o tile do grupo
-
-                # Atualiza o level_map com 0 (vazio)
-                level_map[obj.row][obj.col] = 0  
-                print(f"Key coletada! Total de keys: {player.key_count}")
-            elif obj.type in [10,11,12,13] and player.key_count > 0:
-                player.key_count = player.key_count -1
-                objects.remove(obj)  # Remove o tile do grupo
-
-                # Atualiza o level_map com 0 (vazio)
-                level_map[obj.row][obj.col] = 0  
-                print(f"Key Gasta! Total de keys: {player.key_count}")
-
-                #Inserir lógica para carregar próxima fase AQ E NO COLLIDE!!!
-
 
     return collided_objects
 
@@ -195,24 +199,9 @@ def collide(player, objects, dx):
         
         if pygame.sprite.collide_mask(player, obj):
             collided_object = obj
-            if obj.type in [6, 7, 8, 9]:  # Tipos de Key
-                player.key_count += 1
-                objects.remove(obj)  # Remove o tile do grupo
-
-                # Atualiza o level_map com 0 (vazio)
-                level_map[obj.row][obj.col] = 0  
-                print(f"Key coletada! Total de keys: {player.key_count}")
-            elif obj.type in [10,11,12,13] and player.key_count > 0:
-                player.key_count = player.key_count -1
-                objects.remove(obj)  # Remove o tile do grupo
-
-                # Atualiza o level_map com 0 (vazio)
-                level_map[obj.row][obj.col] = 0  
-                print(f"Key Gasta! Total de keys: {player.key_count}")
-                #Inserir lógica para carregar próxima fase AQ E NO HANDLE_VERTICAL_COLLISION!!!
             break
     
-    player.move(-(1.3*dx),0)
+    player.move(-(1.1*dx),0)
     player.update()
     return collided_object
                 
@@ -259,10 +248,10 @@ def load():
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 1, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 3, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1],
-    [1, 3, 0, 0, 1, 4, 4, 4, 0, 0, 0, 0, 0, 4, 4, 4, 11, 1],
+    [1, 3, 0, 0, 1, 4, 4, 4, 0, 0, 0, 0, 0, 4, 4, 4, 1, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 
@@ -300,7 +289,7 @@ def draw_map(screen, tile_group):
                 if tile_image:  # Verifica se o tile não está vazio
                     x = col * TILE_SIZE
                     y = row * TILE_SIZE
-                    
+
                     # Ajustar a posição do ácido
                     if tile_type == 4:  # 4 representa o ácido no seu mapa
                         y += TILE_SIZE - acid.get_height()  # Ajusta para alinhar embaixo
@@ -315,6 +304,28 @@ def draw_map(screen, tile_group):
     tile_group.update()
     tile_group.draw(screen)
 
+def check_collectibles(player, tile_group, proximity_threshold=20):
+    player.update()  # Atualiza a máscara do jogador
+    player_rect = player.rect  # Retângulo que representa a posição do jogador
+    
+    for tile in tile_group:
+        if tile.type in [6, 7, 8, 9]:  # Tipos das chaves
+            tile_rect = tile.rect  # Retângulo do item
+            if pygame.sprite.collide_mask(player, tile):
+                print(f"Coletando chave {tile.type}")
+                player.collect_key(tile.type)  # Adiciona ao inventário do jogador
+                tile_group.remove(tile)  # Remove o keycard do grupo
+                level_map[tile.row][tile.col] = 0  # Remove do mapa
+                continue
+
+            # Verifica proximidade: se o jogador está dentro do raio de proximidade do item
+            if player_rect.colliderect(tile_rect.inflate(proximity_threshold, proximity_threshold)):
+                # Aproxime a detecção, se o jogador estiver perto do item, colete-o
+                player.collect_key(tile.type)  # Adiciona ao inventário do jogador
+                tile_group.remove(tile)  # Remove o keycard do grupo
+                level_map[tile.row][tile.col] = 0  # Remove do mapa
+
+                
 def draw_button(screen, text, x, y, width_button, height_button, color, hover_color):
     mouse_x, mouse_y = pygame.mouse.get_pos()
     button_rect = pygame.Rect(x, y, width_button, height_button)
@@ -362,7 +373,10 @@ def main(screen):
 
         player.loop(fps)
         handle_move(player, tile_group)
-
+        
+        # Verificar coleta de itens
+        check_collectibles(player, tile_group)
+        
         # Desenha o mapa com os tiles
         draw_map(screen, tile_group)
         draw(screen, player)
@@ -379,9 +393,6 @@ def main(screen):
         
         pygame.display.flip()  # Atualiza a tela
         timer.tick(fps)  # Controla a taxa de frames
-    
-    #VERIFICANDO OBJETOS POR MAPA
-    print_tile_group(tile_group)
     
     pygame.quit()
     sys.exit()
