@@ -74,6 +74,7 @@ class Player(pygame.sprite.Sprite):
         self.animation_count = 0
         self.fall_count = 0
         self.jump_count = 0
+        self.key_count = 0
     
     def jump(self):
         self.vel_y = -self.GRAVITY * 2.3
@@ -149,7 +150,6 @@ def handle_vertical_collision(player, objects, dy):
 
     for obj in objects:
         if not hasattr(obj, 'mask') or obj.mask is None:
-            # Ignora objetos sem máscara
             continue
 
         if pygame.sprite.collide_mask(player, obj):  # Verifica a colisão de máscara
@@ -161,6 +161,25 @@ def handle_vertical_collision(player, objects, dy):
                 player.hit_head()
             
             collided_objects.append(obj)
+
+            # Lógica para lidar com tiles do tipo "Key"
+            if obj.type in [6, 7, 8, 9]:  # Tipos de Key
+                player.key_count += 1
+                objects.remove(obj)  # Remove o tile do grupo
+
+                # Atualiza o level_map com 0 (vazio)
+                level_map[obj.row][obj.col] = 0  
+                print(f"Key coletada! Total de keys: {player.key_count}")
+            elif obj.type in [10,11,12,13] and player.key_count > 0:
+                player.key_count = player.key_count -1
+                objects.remove(obj)  # Remove o tile do grupo
+
+                # Atualiza o level_map com 0 (vazio)
+                level_map[obj.row][obj.col] = 0  
+                print(f"Key Gasta! Total de keys: {player.key_count}")
+
+                #Inserir lógica para carregar próxima fase AQ E NO COLLIDE!!!
+
 
     return collided_objects
 
@@ -176,9 +195,24 @@ def collide(player, objects, dx):
         
         if pygame.sprite.collide_mask(player, obj):
             collided_object = obj
+            if obj.type in [6, 7, 8, 9]:  # Tipos de Key
+                player.key_count += 1
+                objects.remove(obj)  # Remove o tile do grupo
+
+                # Atualiza o level_map com 0 (vazio)
+                level_map[obj.row][obj.col] = 0  
+                print(f"Key coletada! Total de keys: {player.key_count}")
+            elif obj.type in [10,11,12,13] and player.key_count > 0:
+                player.key_count = player.key_count -1
+                objects.remove(obj)  # Remove o tile do grupo
+
+                # Atualiza o level_map com 0 (vazio)
+                level_map[obj.row][obj.col] = 0  
+                print(f"Key Gasta! Total de keys: {player.key_count}")
+                #Inserir lógica para carregar próxima fase AQ E NO HANDLE_VERTICAL_COLLISION!!!
             break
     
-    player.move(-(1.1*dx),0)
+    player.move(-(1.3*dx),0)
     player.update()
     return collided_object
                 
@@ -188,7 +222,6 @@ def handle_move(player, objects):
     player.vel_x = 0
     collide_left = collide(player, objects, -PLAYER_VEL)
     collide_right = collide(player, objects, PLAYER_VEL)
-
 
     if keys[pygame.K_LEFT] and not collide_left:
         player.move_left(PLAYER_VEL)
