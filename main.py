@@ -48,6 +48,16 @@ def load_sprite_sheets(dir1, dir2, width, height, direction=False):
 
     return all_sprites
 
+# Classe do tile
+class Tile(pygame.sprite.Sprite):
+    def __init__(self, x, y, image):
+        super().__init__()
+        self.image = image
+        self.rect = self.image.get_rect(topleft=(x, y))
+    def update(self):
+        #Implementar comportamentos do tile
+        pass
+
 class Player(pygame.sprite.Sprite):
     COLOR = (255, 0, 0)
     GRAVITY = 5
@@ -123,6 +133,8 @@ def handle_move(player):
 def load():
     global bg,clock, rock, ground, platform, acid, blue_key, green_key, red_key, yellow_key, blue_door, green_door, red_door, yellow_door, tiles, level_map,sys_font
     clock = pygame.time.Clock()
+    tile_group = pygame.sprite.Group()
+
 # Carregar imagens (Exemplo com tiles, adicione o caminho correto)
     bg = pygame.image.load('assets/images/space bg.png')
     sys_font = pygame.font.Font("assets/fonts/fonte.ttf", 30)
@@ -174,15 +186,37 @@ def col_vert(player, objects, dy):
 def update(dt):
     global is_Running, RunningCoolDown, player_anim_frame, player_anim_time, gravity, is_jumping
 
-    # Aplicar gravidade ao jogador
+    # Aplicar gravidade ao jogador(a)
     RunningCoolDown += dt
 
+tile_group = pygame.sprite.Group()
+
+# Somente pra verificação de Objetos Tiles
+def print_tile_group(tile_group):
+    print("Verificando os objetos no grupo de tiles:")
+    for index, tile in enumerate(tile_group):
+        tile_type = "Desconhecido"
+        if tile.image == acid:
+            tile_type = "Acid"
+        elif tile.image == ground:
+            tile_type = "Ground"
+        elif tile.image == platform:
+            tile_type = "Platform"
+        elif tile.image == rock:
+            tile_type = "Rock"
+        elif tile.image in [blue_key, green_key, red_key, yellow_key]:
+            tile_type = "Key"
+        elif tile.image in [blue_door, green_door, red_door, yellow_door]:
+            tile_type = "Door"
+        
+        print(f"Index: {index}, Tipo do Tile: {tile_type}, Posição: {tile.rect.topleft}")
+
 # Função para desenhar o mapa
-def draw_map(screen):
+def draw_map(screen, tile_group):
     for row in range(len(level_map)):
         for col in range(len(level_map[row])):
             tile_type = level_map[row][col]
-            if tile_type != 0:
+            if tile_type != 0:  # Ignora espaços vazios
                 tile_image = tiles[tile_type]
                 if tile_image:  # Verifica se o tile não está vazio
                     x = col * TILE_SIZE
@@ -191,7 +225,16 @@ def draw_map(screen):
                     # Ajustar a posição do ácido
                     if tile_type == 4:  # 4 representa o ácido no seu mapa
                         y += TILE_SIZE - acid.get_height()  # Ajusta para alinhar embaixo
-                    screen.blit(tile_image, (x, y))
+
+                    # Verifica se o tile já foi criado
+                    existing_tile = any(t.rect.x == x and t.rect.y == y for t in tile_group)
+                    if not existing_tile:  # Adiciona somente se não existir
+                        tile = Tile(x, y, tile_image)
+                        tile.row = row  # Salva a linha na matriz
+                        tile.col = col  # Salva a coluna na matriz
+                        tile_group.add(tile)
+    tile_group.update()
+    tile_group.draw(screen)
 
 def draw_button(screen, text, x, y, width_button, height_button, color, hover_color):
     mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -210,10 +253,10 @@ def draw_button(screen, text, x, y, width_button, height_button, color, hover_co
     return button_rect  
 
 
-def show_start_screen(screen):
+def show_start_screen(screen, tile_group):
     running = True
     while running:
-        draw_map(screen)
+        draw_map(screen, tile_group)
 
         button_rect = draw_button(screen, "Start", WIDTH // 2 - 150 // 2, 150,  150, 75, (25, 177, 76),(0, 255, 0))    
 
@@ -241,8 +284,9 @@ def main(screen):
 
         player.loop(fps)
         handle_move(player)
+
         # Desenha o mapa com os tiles
-        draw_map(screen)
+        draw_map(screen, tile_group)
         draw(screen, player)
         pygame.display.update()
 
@@ -253,14 +297,16 @@ def main(screen):
         
         pygame.display.flip()  # Atualiza a tela
         timer.tick(fps)  # Controla a taxa de frames
-
+    
+    #VERIFICANDO OBJETOS POR MAPA
+    print_tile_group(tile_group)
+    
     pygame.quit()
     sys.exit()
-
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 load()
-if show_start_screen(screen):  # Exibe a tela de início
+if show_start_screen(screen, tile_group):  # Exibe a tela de início
     main(screen)
 pygame.quit()
