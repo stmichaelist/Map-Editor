@@ -18,8 +18,6 @@ pygame.display.set_caption('Sem Nome')
 fps = 60
 PLAYER_VEL = 10
 timer = pygame.time.Clock()
-is_jumping = False
-is_Running = False
 
 def flip(sprites):
     return [pygame.transform.flip(sprite,True,False) for sprite in sprites]
@@ -48,12 +46,15 @@ def load_sprite_sheets(dir1, dir2, width, height, direction=False):
 
     return all_sprites
 
+
 # Classe do tile
 class Tile(pygame.sprite.Sprite):
-    def __init__(self, x, y, image):
+    def __init__(self, x, y, image, type):
         super().__init__()
         self.image = image
+        self.type = type
         self.rect = self.image.get_rect(topleft=(x, y))
+        self.mask = pygame.mask.from_surface(self.image)
     def update(self):
         #Implementar comportamentos do tile
         pass
@@ -72,7 +73,23 @@ class Player(pygame.sprite.Sprite):
         self.direction = "left"
         self.animation_count = 0
         self.fall_count = 0
-    
+        self.jump_count = 0
+        self.keys = []  
+        self.key_counts = {
+            'blue': 0,
+            'green': 0,
+            'red': 0,
+            'yellow': 0
+        }
+        
+    def jump(self):
+        self.vel_y = -self.GRAVITY * 2.3
+        self.animation_count = 0
+        self.jump_count += 1
+        if self.jump_count == 1:
+            self.fall_count = 0
+
+
     def move(self, dx, dy):
         self.rect.x += dx
         self.rect.y += dy
@@ -90,15 +107,43 @@ class Player(pygame.sprite.Sprite):
             self.animation_count = 0
 
     def loop(self, fps):
-        #self.vel_y += min(1,(self.fall_count/fps) * self.GRAVITY)
+        self.vel_y += min(1,(self.fall_count/fps) * self.GRAVITY)
         self.move(self.vel_x, self.vel_y)
 
         self.fall_count += 1
         self.update_sprite()
     
+    def landed(self):
+        self.fall_count = 0
+        self.vel_y = 0
+        self.jump_count = 0
+
+    def hit_head(self):
+        self.count = 0
+        self.vel_y *= -1
+        
+    def collect_key(self, key_type):
+        # Verifica se a chave já foi coletada, se não, incrementa o contador
+        if key_type == 6 and key_type not in self.keys:  # Azul
+            self.key_counts['blue'] += 1
+            self.keys.append(key_type)
+        elif key_type == 7 and key_type not in self.keys:  # Verde
+            self.key_counts['green'] += 1
+            self.keys.append(key_type)
+        elif key_type == 8 and key_type not in self.keys:  # Vermelha
+            self.key_counts['red'] += 1
+            self.keys.append(key_type)
+        elif key_type == 9 and key_type not in self.keys:  # Amarela
+            self.key_counts['yellow'] += 1
+            self.keys.append(key_type)
+        print(f"Chaves coletadas - Azul: {self.key_counts['blue']}, Verde: {self.key_counts['green']}, Vermelha: {self.key_counts['red']}, Amarela: {self.key_counts['yellow']}")
+
     def update_sprite(self):
         sprite_sheet = "astronaut"
-        if self.vel_x != 0:
+        if self.vel_y != 0:
+            if self.jump_count == 1:
+                sprite_sheet = "Jump"
+        if self.vel_x != 0 and self.vel_y > 0:
             sprite_sheet ="Walk"
 
         sprite_sheet_name = sprite_sheet + "_"+ self.direction
@@ -121,14 +166,59 @@ def draw(screen, player):
 
     pygame.display.update()
 
-def handle_move(player):
+def handle_vertical_collision(player, objects, dy):
+    collided_objects = []
+    player.update()  # Garante que a máscara do jogador está atualizada
+
+    for obj in objects:
+        if not hasattr(obj, 'mask') or obj.mask is None:
+            # Ignora objetos sem máscara
+            continue
+
+        if pygame.sprite.collide_mask(player, obj):  # Verifica a colisão de máscara
+            if dy > 0:
+                player.rect.bottom = obj.rect.top
+                player.landed()
+            elif dy < 0:
+                player.rect.top = obj.rect.bottom
+                player.hit_head()
+            
+            collided_objects.append(obj)
+
+    return collided_objects
+
+def collide(player, objects, dx):
+    player.move(dx, 0)
+    player.update()
+    collided_object = None
+
+    for obj in objects:
+        if not hasattr(obj, 'mask') or obj.mask is None:
+            # Ignora objetos sem máscara
+            continue
+        
+        if pygame.sprite.collide_mask(player, obj):
+            collided_object = obj
+            break
+    
+    player.move(-(1.1*dx),0)
+    player.update()
+    return collided_object
+                
+def handle_move(player, objects):
     keys = pygame.key.get_pressed()
 
     player.vel_x = 0
-    if keys[pygame.K_LEFT]:
+    collide_left = collide(player, objects, -PLAYER_VEL)
+    collide_right = collide(player, objects, PLAYER_VEL)
+
+
+    if keys[pygame.K_LEFT] and not collide_left:
         player.move_left(PLAYER_VEL)
-    if keys[pygame.K_RIGHT]:
+    if keys[pygame.K_RIGHT] and not collide_right:
         player.move_right(PLAYER_VEL)
+
+    handle_vertical_collision(player, objects, player.vel_y)
 
 def load():
     global bg,clock, rock, ground, platform, acid, blue_key, green_key, red_key, yellow_key, blue_door, green_door, red_door, yellow_door, tiles, level_map,sys_font
@@ -159,35 +249,14 @@ def load():
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 1, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 3, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1],
-    [1, 3, 0, 0, 1, 4, 4, 4, 0, 0, 0, 0, 0, 4, 4, 4, 11, 1],
+    [1, 3, 0, 0, 1, 4, 4, 4, 0, 0, 0, 0, 0, 4, 4, 4, 1, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 
     ]
-
-def col_vert(player, objects, dy):
-    collided_objects = []
-    for obj in objects:
-        if pygame.sprite.collide_mask(player, obj):
-            if dy > 0:
-                player.rect.bottom = obj.rect.top
-                player.landed()
-            elif dy <0:
-                player.rect.top = obj.rect.bottom
-                player.hit_head()
-        collided_objects.append(obj)
-
-        return collided_objects
-
-
-def update(dt):
-    global is_Running, RunningCoolDown, player_anim_frame, player_anim_time, gravity, is_jumping
-
-    # Aplicar gravidade ao jogador(a)
-    RunningCoolDown += dt
 
 tile_group = pygame.sprite.Group()
 
@@ -221,7 +290,7 @@ def draw_map(screen, tile_group):
                 if tile_image:  # Verifica se o tile não está vazio
                     x = col * TILE_SIZE
                     y = row * TILE_SIZE
-                    
+
                     # Ajustar a posição do ácido
                     if tile_type == 4:  # 4 representa o ácido no seu mapa
                         y += TILE_SIZE - acid.get_height()  # Ajusta para alinhar embaixo
@@ -229,13 +298,35 @@ def draw_map(screen, tile_group):
                     # Verifica se o tile já foi criado
                     existing_tile = any(t.rect.x == x and t.rect.y == y for t in tile_group)
                     if not existing_tile:  # Adiciona somente se não existir
-                        tile = Tile(x, y, tile_image)
+                        tile = Tile(x, y, tile_image, tile_type)
                         tile.row = row  # Salva a linha na matriz
                         tile.col = col  # Salva a coluna na matriz
                         tile_group.add(tile)
     tile_group.update()
     tile_group.draw(screen)
 
+def check_collectibles(player, tile_group, proximity_threshold=20):
+    player.update()  # Atualiza a máscara do jogador
+    player_rect = player.rect  # Retângulo que representa a posição do jogador
+    
+    for tile in tile_group:
+        if tile.type in [6, 7, 8, 9]:  # Tipos das chaves
+            tile_rect = tile.rect  # Retângulo do item
+            if pygame.sprite.collide_mask(player, tile):
+                print(f"Coletando chave {tile.type}")
+                player.collect_key(tile.type)  # Adiciona ao inventário do jogador
+                tile_group.remove(tile)  # Remove o keycard do grupo
+                level_map[tile.row][tile.col] = 0  # Remove do mapa
+                continue
+
+            # Verifica proximidade: se o jogador está dentro do raio de proximidade do item
+            if player_rect.colliderect(tile_rect.inflate(proximity_threshold, proximity_threshold)):
+                # Aproxime a detecção, se o jogador estiver perto do item, colete-o
+                player.collect_key(tile.type)  # Adiciona ao inventário do jogador
+                tile_group.remove(tile)  # Remove o keycard do grupo
+                level_map[tile.row][tile.col] = 0  # Remove do mapa
+
+                
 def draw_button(screen, text, x, y, width_button, height_button, color, hover_color):
     mouse_x, mouse_y = pygame.mouse.get_pos()
     button_rect = pygame.Rect(x, y, width_button, height_button)
@@ -272,7 +363,7 @@ def show_start_screen(screen, tile_group):
 def main(screen):
     global clock
     running = True
-    player = Player(100, 100, 50, 50)
+    player = Player(250, 620, 50, 50)
     while running:
         screen.fill('black')  # Limpa a tela com a cor preta
         
@@ -280,11 +371,13 @@ def main(screen):
         screen.blit(bg, (0, 0))  # Desenha a imagem do fundo na posição (0, 0)
         clock.tick(fps)
         dt = clock.get_time()
-        update(dt)
 
         player.loop(fps)
-        handle_move(player)
-
+        handle_move(player, tile_group)
+        
+        # Verificar coleta de itens
+        check_collectibles(player, tile_group)
+        
         # Desenha o mapa com os tiles
         draw_map(screen, tile_group)
         draw(screen, player)
@@ -294,12 +387,13 @@ def main(screen):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP and player.jump_count < 1:
+                    player.jump()
+
         
         pygame.display.flip()  # Atualiza a tela
         timer.tick(fps)  # Controla a taxa de frames
-    
-    #VERIFICANDO OBJETOS POR MAPA
-    print_tile_group(tile_group)
     
     pygame.quit()
     sys.exit()
