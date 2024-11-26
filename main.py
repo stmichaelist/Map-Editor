@@ -74,13 +74,14 @@ class Player(pygame.sprite.Sprite):
         self.animation_count = 0
         self.fall_count = 0
         self.jump_count = 0
-        self.keys = []  
+        self.keys = []
         self.key_counts = {
             'blue': 0,
             'green': 0,
             'red': 0,
             'yellow': 0
         }
+        self.openned_doors = []
         
     def jump(self):
         self.vel_y = -self.GRAVITY * 2.3
@@ -137,6 +138,33 @@ class Player(pygame.sprite.Sprite):
             self.key_counts['yellow'] += 1
             self.keys.append(key_type)
         print(f"Chaves coletadas - Azul: {self.key_counts['blue']}, Verde: {self.key_counts['green']}, Vermelha: {self.key_counts['red']}, Amarela: {self.key_counts['yellow']}")
+    
+    def open_doors(self, door_type, tile):
+        # Verifica se a chave já foi coletada, se não, incrementa o contador
+        if door_type == 10 and door_type not in self.openned_doors and self.key_counts['blue'] > 0:  # Azul
+            self.key_counts['blue'] -= 1
+            self.openned_doors.append(door_type)
+            tile_group.remove(tile)  # Remove o keycard do grupo
+            level_map[tile.row][tile.col] = 0  # Remove do mapa
+            print(f"Porta Aberta!")
+        elif door_type == 11 and door_type not in self.openned_doorsand and self.key_counts['green'] > 0:  # Verde
+            self.key_counts['green'] -= 1
+            self.openned_doors.append(door_type)
+            tile_group.remove(tile)  # Remove o keycard do grupo
+            level_map[tile.row][tile.col] = 0  # Remove do mapa
+            print(f"Porta Aberta!")
+        elif door_type == 12 and door_type not in self.openned_doors and self.key_counts['red'] > 0:  # Vermelha
+            self.key_counts['red'] -= 1
+            self.openned_doors.append(door_type)
+            tile_group.remove(tile)  # Remove o keycard do grupo
+            level_map[tile.row][tile.col] = 0  # Remove do mapa
+            print(f"Porta Aberta!")
+        elif door_type == 13 and door_type not in self.openned_doors and self.key_counts['yellow'] > 0:  # Amarela
+            self.key_counts['yellow'] -= 1
+            self.openned_doors.append(door_type)
+            tile_group.remove(tile)  # Remove o keycard do grupo
+            level_map[tile.row][tile.col] = 0  # Remove do mapa
+            print(f"Porta Aberta!")
 
     def update_sprite(self):
         sprite_sheet = "astronaut"
@@ -201,7 +229,7 @@ def collide(player, objects, dx):
             collided_object = obj
             break
     
-    player.move(-(1.1*dx),0)
+    player.move(-(1.3*dx),0)
     player.update()
     return collided_object
                 
@@ -248,10 +276,10 @@ def load():
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 1, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 3, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1],
-    [1, 3, 0, 0, 1, 4, 4, 4, 0, 0, 0, 0, 0, 4, 4, 4, 1, 1],
+    [1, 3, 0, 0, 1, 4, 4, 4, 8, 0, 0, 0, 0, 4, 4, 4, 12, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 
@@ -325,6 +353,23 @@ def check_collectibles(player, tile_group, proximity_threshold=20):
                 tile_group.remove(tile)  # Remove o keycard do grupo
                 level_map[tile.row][tile.col] = 0  # Remove do mapa
 
+
+def check_doors(player, tile_group, proximity_threshold=20):
+    player.update()  # Atualiza a máscara do jogador
+    player_rect = player.rect  # Retângulo que representa a posição do jogador
+    for tile in tile_group:
+        if tile.type in [10, 11, 12, 13]:  # Tipos das chaves
+            tile_rect = tile.rect  # Retângulo do item
+            if pygame.sprite.collide_mask(player, tile):
+                print(f"Abrindo porta {tile.type}")
+                player.open_doors(tile.type, tile)  # Adiciona ao inventário do jogador
+                continue
+
+            # Verifica proximidade: se o jogador está dentro do raio de proximidade do item
+            if player_rect.colliderect(tile_rect.inflate(proximity_threshold, proximity_threshold)):
+                # Aproxime a detecção, se o jogador estiver perto do item, colete-o
+                player.open_doors(tile.type, tile)  # Adiciona ao inventário do jogador
+
                 
 def draw_button(screen, text, x, y, width_button, height_button, color, hover_color):
     mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -376,6 +421,8 @@ def main(screen):
         
         # Verificar coleta de itens
         check_collectibles(player, tile_group)
+
+        check_doors(player, tile_group)
         
         # Desenha o mapa com os tiles
         draw_map(screen, tile_group)
