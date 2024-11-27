@@ -47,17 +47,13 @@ def load_sprite_sheets(dir1, dir2, width, height, direction=False):
     return all_sprites
 
 
-
 # Classe do tile
 class Tile(pygame.sprite.Sprite):
-    def __init__(self, x, y, image, type):
     def __init__(self, x, y, image, type):
         super().__init__()
         self.image = image
         self.type = type
-        self.type = type
         self.rect = self.image.get_rect(topleft=(x, y))
-        self.mask = pygame.mask.from_surface(self.image)
         self.mask = pygame.mask.from_surface(self.image)
     def update(self):
         #Implementar comportamentos do tile
@@ -112,7 +108,6 @@ class Player(pygame.sprite.Sprite):
 
     def loop(self, fps):
         self.vel_y += min(1,(self.fall_count/fps) * self.GRAVITY)
-        self.vel_y += min(1,(self.fall_count/fps) * self.GRAVITY)
         self.move(self.vel_x, self.vel_y)
 
         self.fall_count += 1
@@ -149,10 +144,6 @@ class Player(pygame.sprite.Sprite):
             if self.jump_count == 1:
                 sprite_sheet = "Jump"
         if self.vel_x != 0 and self.vel_y > 0:
-        if self.vel_y != 0:
-            if self.jump_count == 1:
-                sprite_sheet = "Jump"
-        if self.vel_x != 0 and self.vel_y > 0:
             sprite_sheet ="Walk"
 
         sprite_sheet_name = sprite_sheet + "_"+ self.direction
@@ -167,6 +158,31 @@ class Player(pygame.sprite.Sprite):
 
     def draw(self, win):
         win.blit(self.sprite, (self.rect.x, self.rect.y))
+
+def restart_game(screen, tile_group):
+    """Reinicia o jogo, resetando o estado do jogador e do mapa"""
+    # Reinicia o player (posição inicial)
+    player = Player(250, 620, 50, 50)
+    
+    # Redefine o mapa de níveis se necessário
+    global level_map
+    level_map = [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 1, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 3, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1],
+        [1, 3, 0, 0, 1, 4, 4, 4, 0, 0, 0, 0, 0, 4, 4, 4, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    ]
+    
+    # Reinicia o grupo de tiles (se necessário)
+    tile_group.empty()
+    draw_map(screen, tile_group)  # Recarrega o mapa
+    
+    return player  # Retorna o jogador para o loop principal
 
 def draw(screen, player):
 
@@ -215,46 +231,6 @@ def collide(player, objects, dx):
     return collided_object
                 
 def handle_move(player, objects):
-def handle_vertical_collision(player, objects, dy):
-    collided_objects = []
-    player.update()  # Garante que a máscara do jogador está atualizada
-
-    for obj in objects:
-        if not hasattr(obj, 'mask') or obj.mask is None:
-            # Ignora objetos sem máscara
-            continue
-
-        if pygame.sprite.collide_mask(player, obj):  # Verifica a colisão de máscara
-            if dy > 0:
-                player.rect.bottom = obj.rect.top
-                player.landed()
-            elif dy < 0:
-                player.rect.top = obj.rect.bottom
-                player.hit_head()
-            
-            collided_objects.append(obj)
-
-    return collided_objects
-
-def collide(player, objects, dx):
-    player.move(dx, 0)
-    player.update()
-    collided_object = None
-
-    for obj in objects:
-        if not hasattr(obj, 'mask') or obj.mask is None:
-            # Ignora objetos sem máscara
-            continue
-        
-        if pygame.sprite.collide_mask(player, obj):
-            collided_object = obj
-            break
-    
-    player.move(-(1.1*dx),0)
-    player.update()
-    return collided_object
-                
-def handle_move(player, objects):
     keys = pygame.key.get_pressed()
 
     player.vel_x = 0
@@ -263,17 +239,9 @@ def handle_move(player, objects):
 
 
     if keys[pygame.K_LEFT] and not collide_left:
-    collide_left = collide(player, objects, -PLAYER_VEL)
-    collide_right = collide(player, objects, PLAYER_VEL)
-
-
-    if keys[pygame.K_LEFT] and not collide_left:
         player.move_left(PLAYER_VEL)
     if keys[pygame.K_RIGHT] and not collide_right:
-    if keys[pygame.K_RIGHT] and not collide_right:
         player.move_right(PLAYER_VEL)
-
-    handle_vertical_collision(player, objects, player.vel_y)
 
     handle_vertical_collision(player, objects, player.vel_y)
 
@@ -309,7 +277,7 @@ def load():
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 1, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 3, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1],
-    [1, 3, 0, 0, 1, 4, 4, 4, 0, 0, 0, 0, 0, 4, 4, 4, 1, 1],
+    [1, 3, 0, 0, 1, 4, 4, 4, 0, 0, 0, 0, 0, 4, 4, 4, 11, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 
@@ -356,9 +324,9 @@ def draw_map(screen, tile_group):
                     existing_tile = any(t.rect.x == x and t.rect.y == y for t in tile_group)
                     if not existing_tile:  # Adiciona somente se não existir
                         tile = Tile(x, y, tile_image, tile_type)
-                        tile = Tile(x, y, tile_image, tile_type)
-                        tile.row = row  # Salva a linha na matriz
-                        tile.col = col  # Salva a coluna na matriz
+                        # Salva na matriz
+                        tile.row = row  
+                        tile.col = col  
                         tile_group.add(tile)
     tile_group.update()
     tile_group.draw(screen)
@@ -379,10 +347,9 @@ def check_collectibles(player, tile_group, proximity_threshold=20):
 
             # Verifica proximidade: se o jogador está dentro do raio de proximidade do item
             if player_rect.colliderect(tile_rect.inflate(proximity_threshold, proximity_threshold)):
-                # Aproxime a detecção, se o jogador estiver perto do item, colete-o
-                player.collect_key(tile.type)  # Adiciona ao inventário do jogador
-                tile_group.remove(tile)  # Remove o keycard do grupo
-                level_map[tile.row][tile.col] = 0  # Remove do mapa
+                player.collect_key(tile.type)
+                tile_group.remove(tile)
+                level_map[tile.row][tile.col] = 0  
 
                 
 def draw_button(screen, text, x, y, width_button, height_button, color, hover_color):
@@ -422,7 +389,6 @@ def main(screen):
     global clock
     running = True
     player = Player(250, 620, 50, 50)
-    player = Player(250, 620, 50, 50)
     while running:
         screen.fill('black')  # Limpa a tela com a cor preta
         
@@ -449,11 +415,8 @@ def main(screen):
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP and player.jump_count < 1:
                     player.jump()
-
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_UP and player.jump_count < 1:
-                    player.jump()
-
+                if event.key == pygame.K_r: 
+                    player = restart_game(screen, tile_group)  
         
         pygame.display.flip()  # Atualiza a tela
         timer.tick(fps)  # Controla a taxa de frames
