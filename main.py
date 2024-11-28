@@ -495,7 +495,7 @@ def main(screen):
         check_collectibles(player, tile_group)
 
         check_doors(player, tile_group)
-        if player.dead:
+        if player.dead or player.rect.right < 0 or player.rect.left > 1800:
         # Mostra uma mensagem de "Game Over" e reinicia o jogo
             game_over_text = sys_font.render("Game Over", True, (255, 0, 0))
             screen.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 2))
