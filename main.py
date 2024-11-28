@@ -66,6 +66,7 @@ class Player(pygame.sprite.Sprite):
     GRAVITY = 5
     SPRITES = load_sprite_sheets("images", "astronaut", 32, 32, True)
     ANIMATION_DELAY = 5
+    LIVES=3
 
     def __init__(self, x, y, width, height):
         self.rect = pygame.Rect(x, y, width, height)
@@ -84,6 +85,19 @@ class Player(pygame.sprite.Sprite):
             'yellow': 0
         }
         self.openned_doors = []
+        self.lives = self.LIVES  # Inicializa o número de vidas
+        self.dead = False  # Flag para verificar se o jogador morreu
+        
+    def lose_life(self):
+        self.lives -= 1
+        if self.lives <= 0:
+            self.dead = True  # O jogador morre quando as vidas chegam a 0
+    
+    def reset_position(self, x, y):
+        self.rect.x = x
+        self.rect.y = y
+        self.lives = self.LIVES  # Restaura as vidas ao reiniciar
+        self.dead = False  # O jogador revive
         
     def jump(self):
         self.vel_y = -self.GRAVITY * 2.3
@@ -236,7 +250,9 @@ def handle_vertical_collision(player, objects, dy):
             elif dy < 0:
                 player.rect.top = obj.rect.bottom
                 player.hit_head()
-            
+            if obj.image == acid:  
+                player.lives=0
+                player.lose_life()
             collided_objects.append(obj)
 
     return collided_objects
@@ -420,6 +436,10 @@ def draw_button(screen, text, x, y, width_button, height_button, color, hover_co
     return button_rect  
 
 
+def draw_lives(screen, lives, font):
+    lives_text = font.render(f'Vidas: {lives}', True, (255, 255, 255))
+    screen.blit(lives_text, (10, 10))  # Desenha o texto no canto superior esquerdo
+
 def show_start_screen(screen, tile_group):
     running = True
     while running:
@@ -457,7 +477,7 @@ def show_end_screen(screen):
 
 # Função principal
 def main(screen):
-    global clock
+    global clock,level,level_map 
     running = True
     player = Player(230, 620, 50, 50)
     while running:
@@ -475,10 +495,31 @@ def main(screen):
         check_collectibles(player, tile_group)
 
         check_doors(player, tile_group)
-        
+        if player.dead:
+        # Mostra uma mensagem de "Game Over" e reinicia o jogo
+            game_over_text = sys_font.render("Game Over", True, (255, 0, 0))
+            screen.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 2))
+            pygame.display.update()
+            pygame.time.wait(2000)  # Espera 2 segundos antes de reiniciar
+            player.reset_position(100, 10)  # Reseta o jogador para a posição inicial
+            player.lives=3
+            level=1 
+
+            path = f'level{level}.txt'
+            print(f"Carregando {path}...")
+
+            # Recarregar o mapa
+            level_map = load_level_from_file(path)
+
+            tile_group.empty()  
+            screen.fill((0, 0, 0))
+            if show_start_screen(screen, tile_group):  # Exibe a tela de início
+                main(screen)
         # Desenha o mapa com os tiles
         draw_map(screen, tile_group)
         draw(screen, player)
+
+        draw_lives(screen, player.lives, sys_font)
         pygame.display.update()
 
         # Evento de fechar a janela
