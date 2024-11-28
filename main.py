@@ -100,6 +100,7 @@ class Player(pygame.sprite.Sprite):
         self.dead = False  # O jogador revive
         
     def jump(self):
+        audiojump.play()
         self.vel_y = -self.GRAVITY * 2.3
         self.animation_count = 0
         self.jump_count += 1
@@ -140,6 +141,8 @@ class Player(pygame.sprite.Sprite):
         self.vel_y *= -1
         
     def collect_key(self, key_type):
+        audiokey.play()
+        
         # Mapeia os tipos de chaves para suas cores
         key_map = {
             6: 'blue',
@@ -156,8 +159,8 @@ class Player(pygame.sprite.Sprite):
 
     
     def open_doors(self, door_type, tile):
+        audiodoor.play()
         global level, path, level_map, tile_group
-
         # Mapeia os tipos de porta com suas respectivas chaves
         key_map = {
             10: 'blue',
@@ -180,6 +183,7 @@ class Player(pygame.sprite.Sprite):
 
                 # Carregar o próximo nível
                 if level < 5:  # Se ainda houver níveis disponíveis
+                    
                     level += 1
                     path = f'level{level}.txt'
                     print(f"Carregando {path}...")
@@ -305,10 +309,20 @@ def load_level_from_file(file_path):
 
 
 def load():
-    global bg,clock, rock, ground, platform, acid, blue_key, green_key, red_key, yellow_key, blue_door, green_door, red_door, yellow_door, tiles, level_map,sys_font, level, path
+    global bg,clock, rock, ground, platform, acid, blue_key, green_key, red_key, yellow_key, blue_door, green_door, red_door, yellow_door, tiles, level_map,sys_font, level, path,audiostart,audioacid,audiokey,audiodoor,audiojump, audioend
     clock = pygame.time.Clock()
     tile_group = pygame.sprite.Group()
+    pygame.mixer.init()
+    pygame.mixer.set_num_channels(6)
 
+    audioacid = pygame.mixer.Sound("assets/sounds/acid.mp3")
+    audiokey = pygame.mixer.Sound("assets/sounds/key_acquire.mp3")
+    audiodoor = pygame.mixer.Sound("assets/sounds/portal.mp3")
+    audiojump=pygame.mixer.Sound("assets/sounds/leap.mp3")
+    audiostart=pygame.mixer.music.load("assets/sounds/song2.mp3")
+
+    pygame.mixer.music.play(-1) 
+    audioend=pygame.mixer.Sound("assets/sounds/victory.mp3")
 # Carregar imagens (Exemplo com tiles, adicione o caminho correto)
     bg = pygame.image.load('assets/images/space bg.png')
     sys_font = pygame.font.Font("assets/fonts/fonte.ttf", 30)
@@ -447,6 +461,7 @@ def show_start_screen(screen, tile_group):
 
         button_rect = draw_button(screen, "Start", WIDTH // 2 - 150 // 2, 150,  150, 75, (25, 177, 76),(0, 255, 0))    
 
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False  # Encerra o jogo
@@ -456,6 +471,7 @@ def show_start_screen(screen, tile_group):
         pygame.display.update()
 
 def show_end_screen(screen):
+    audioend.play() 
     running = True
     while running:
         screen.fill((0, 0, 0))  # Preenche o fundo de preto
