@@ -18,6 +18,8 @@ pygame.display.set_caption('Sem Nome')
 fps = 60
 PLAYER_VEL = 10
 timer = pygame.time.Clock()
+global level, path
+level = 1
 
 def flip(sprites):
     return [pygame.transform.flip(sprite,True,False) for sprite in sprites]
@@ -124,47 +126,71 @@ class Player(pygame.sprite.Sprite):
         self.vel_y *= -1
         
     def collect_key(self, key_type):
-        # Verifica se a chave já foi coletada, se não, incrementa o contador
-        if key_type == 6 and key_type not in self.keys:  # Azul
-            self.key_counts['blue'] += 1
-            self.keys.append(key_type)
-        elif key_type == 7 and key_type not in self.keys:  # Verde
-            self.key_counts['green'] += 1
-            self.keys.append(key_type)
-        elif key_type == 8 and key_type not in self.keys:  # Vermelha
-            self.key_counts['red'] += 1
-            self.keys.append(key_type)
-        elif key_type == 9 and key_type not in self.keys:  # Amarela
-            self.key_counts['yellow'] += 1
-            self.keys.append(key_type)
-        print(f"Chaves coletadas - Azul: {self.key_counts['blue']}, Verde: {self.key_counts['green']}, Vermelha: {self.key_counts['red']}, Amarela: {self.key_counts['yellow']}")
+        # Mapeia os tipos de chaves para suas cores
+        key_map = {
+            6: 'blue',
+            7: 'green',
+            8: 'red',
+            9: 'yellow'
+        }
+
+        if key_type in key_map:
+            key_color = key_map[key_type]
+            self.key_counts[key_color] += 1  # Incrementa o contador
+            print(f"Chave {key_color.capitalize()} coletada!")
+            print(f"Inventário de chaves: {self.key_counts}")
+
     
     def open_doors(self, door_type, tile):
-        # Verifica se a chave já foi coletada, se não, incrementa o contador
-        if door_type == 10 and door_type not in self.openned_doors and self.key_counts['blue'] > 0:  # Azul
-            self.key_counts['blue'] -= 1
-            self.openned_doors.append(door_type)
-            tile_group.remove(tile)  # Remove o keycard do grupo
-            level_map[tile.row][tile.col] = 0  # Remove do mapa
-            print(f"Porta Aberta!")
-        elif door_type == 11 and door_type not in self.openned_doorsand and self.key_counts['green'] > 0:  # Verde
-            self.key_counts['green'] -= 1
-            self.openned_doors.append(door_type)
-            tile_group.remove(tile)  # Remove o keycard do grupo
-            level_map[tile.row][tile.col] = 0  # Remove do mapa
-            print(f"Porta Aberta!")
-        elif door_type == 12 and door_type not in self.openned_doors and self.key_counts['red'] > 0:  # Vermelha
-            self.key_counts['red'] -= 1
-            self.openned_doors.append(door_type)
-            tile_group.remove(tile)  # Remove o keycard do grupo
-            level_map[tile.row][tile.col] = 0  # Remove do mapa
-            print(f"Porta Aberta!")
-        elif door_type == 13 and door_type not in self.openned_doors and self.key_counts['yellow'] > 0:  # Amarela
-            self.key_counts['yellow'] -= 1
-            self.openned_doors.append(door_type)
-            tile_group.remove(tile)  # Remove o keycard do grupo
-            level_map[tile.row][tile.col] = 0  # Remove do mapa
-            print(f"Porta Aberta!")
+        global level, path, level_map, tile_group
+
+        # Mapeia os tipos de porta com suas respectivas chaves
+        key_map = {
+            10: 'blue',
+            11: 'green',
+            12: 'red',
+            13: 'yellow'
+        }
+
+        # Verifica se o tipo de porta é válido e se ainda não foi aberta
+        if door_type in key_map:
+            key_color = key_map[door_type]
+
+            # Verifica se há chaves disponíveis para a porta
+            if self.key_counts[key_color] > 0:
+                self.key_counts[key_color] -= 1  # Remove uma chave do inventário
+                self.openned_doors.append(door_type)  # Marca a porta como aberta
+                tile_group.remove(tile)  # Remove a porta do grupo
+                level_map[tile.row][tile.col] = 0  # Remove a porta do mapa
+                print(f"Porta {key_color.capitalize()} aberta! Chaves restantes: {self.key_counts}")
+
+                # Carregar o próximo nível
+                if level < 5:  # Se ainda houver níveis disponíveis
+                    level += 1
+                    path = f'level{level}.txt'
+                    print(f"Carregando {path}...")
+
+                    # Recarregar o mapa
+                    level_map = load_level_from_file(path)
+
+                    # Reconfigurar o grupo de tiles
+                    tile_group.empty()  # Limpa o grupo existente
+                    draw_map(screen, tile_group)  # Recarrega o grupo de tiles no novo nível
+
+                    # Reposicionar o jogador
+                    self.rect.x, self.rect.y = 230, 620
+                    print(f"Jogador transportado para ({self.rect.x}, {self.rect.y})")
+
+                else:
+                    # Caso seja o último nível, exibir tela final
+                    screen.fill((0, 0, 0))  # Limpa a tela
+                    show_end_screen(screen)
+                    pygame.quit()
+                    sys.exit()
+
+            else:
+                print(f"Sem chaves {key_color.capitalize()} para abrir a porta!")
+
 
     def update_sprite(self):
         sprite_sheet = "astronaut"
@@ -246,9 +272,24 @@ def handle_move(player, objects):
         player.move_right(PLAYER_VEL)
 
     handle_vertical_collision(player, objects, player.vel_y)
+    
+def load_level_from_file(file_path):
+    level_map = []
+    try:
+        with open(file_path, 'r') as file:
+            for line in file:
+                # Converte a linha para uma lista de inteiros
+                row = [int(value) for value in line.strip().strip('[],').split(',')]
+                level_map.append(row)
+    except FileNotFoundError:
+        print(f"Erro: O arquivo '{file_path}' não foi encontrado.")
+    except ValueError:
+        print("Erro: O arquivo contém valores inválidos.")
+    return level_map
+
 
 def load():
-    global bg,clock, rock, ground, platform, acid, blue_key, green_key, red_key, yellow_key, blue_door, green_door, red_door, yellow_door, tiles, level_map,sys_font
+    global bg,clock, rock, ground, platform, acid, blue_key, green_key, red_key, yellow_key, blue_door, green_door, red_door, yellow_door, tiles, level_map,sys_font, level, path
     clock = pygame.time.Clock()
     tile_group = pygame.sprite.Group()
 
@@ -272,18 +313,9 @@ def load():
     tiles = ['', rock, ground, platform, acid, '', blue_key, green_key, red_key, yellow_key, blue_door, green_door, red_door, yellow_door]
 
     # Definir o mapa do nível (copie do Level Editor)
-    level_map = [
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 1, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 3, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1],
-    [1, 3, 0, 0, 1, 4, 4, 4, 8, 0, 0, 0, 0, 4, 4, 4, 12, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-
-    ]
+    path = f'level{level}.txt'
+    print(path)
+    level_map = load_level_from_file(path)
 
 tile_group = pygame.sprite.Group()
 
@@ -403,11 +435,31 @@ def show_start_screen(screen, tile_group):
 
         pygame.display.update()
 
+def show_end_screen(screen):
+    running = True
+    while running:
+        screen.fill((0, 0, 0))  # Preenche o fundo de preto
+
+        # Configuração do texto
+        font = pygame.font.Font(None, 74)  # Fonte e tamanho
+        text = font.render("Parabéns! Você completou o jogo!", True, (255, 255, 255))  # Texto branco
+        text_rect = text.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))  # Centraliza
+
+        # Desenha o texto
+        screen.blit(text, text_rect)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False  # Encerra o jogo
+
+        pygame.display.update()
+
+
 # Função principal
 def main(screen):
     global clock
     running = True
-    player = Player(250, 620, 50, 50)
+    player = Player(230, 620, 50, 50)
     while running:
         screen.fill('black')  # Limpa a tela com a cor preta
         
