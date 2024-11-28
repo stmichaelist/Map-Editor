@@ -14,7 +14,7 @@ TILE_SIZE = 100
 WIDTH = 1800
 HEIGHT = 900
 screen = pygame.display.set_mode([WIDTH, HEIGHT])
-pygame.display.set_caption('Sem Nome')
+pygame.display.set_caption('Astronaut Adventures')
 fps = 60
 PLAYER_VEL = 10
 timer = pygame.time.Clock()
