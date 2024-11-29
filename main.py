@@ -202,7 +202,7 @@ class Player(pygame.sprite.Sprite):
                 else:
                     # Caso seja o último nível, exibir tela final
                     screen.fill((0, 0, 0))  # Limpa a tela
-                    show_end_screen(screen)
+                    show_end_screen(screen,self)
                     pygame.quit()
                     sys.exit()
 
@@ -232,10 +232,7 @@ class Player(pygame.sprite.Sprite):
         win.blit(self.sprite, (self.rect.x, self.rect.y))
 
 def draw(screen, player):
-
-
     player.draw(screen)
-
     pygame.display.update()
 
 def handle_vertical_collision(player, objects, dy):
@@ -319,7 +316,7 @@ def load():
     audiokey = pygame.mixer.Sound("assets/sounds/key_acquire.mp3")
     audiodoor = pygame.mixer.Sound("assets/sounds/portal.mp3")
     audiojump=pygame.mixer.Sound("assets/sounds/leap.mp3")
-    audiostart=pygame.mixer.music.load("assets/sounds/song2.mp3")
+    pygame.mixer.music.load("assets/sounds/song2.mp3")
 
     pygame.mixer.music.play(-1) 
     audioend=pygame.mixer.Sound("assets/sounds/victory.mp3")
@@ -450,9 +447,11 @@ def draw_button(screen, text, x, y, width_button, height_button, color, hover_co
     return button_rect  
 
 
-def draw_lives(screen, lives, font):
-    lives_text = font.render(f'Vidas: {lives}', True, (255, 255, 255))
-    screen.blit(lives_text, (10, 10))  # Desenha o texto no canto superior esquerdo
+def draw_info(screen, text, font,x,y):
+    lives_text = font.render(text, True, (255, 255, 255))
+    screen.blit(lives_text, (x, y))  # Desenha o texto no canto superior esquerdo
+
+
 
 def show_start_screen(screen, tile_group):
     running = True
@@ -470,8 +469,11 @@ def show_start_screen(screen, tile_group):
 
         pygame.display.update()
 
-def show_end_screen(screen):
-    audioend.play() 
+def show_end_screen(screen,player):
+    global level
+    pygame.mixer.music.stop() 
+    pygame.mixer.music.load("assets/sounds/victory.mp3")
+    pygame.mixer.music.play(-1) 
     running = True
     while running:
         screen.fill((0, 0, 0))  # Preenche o fundo de preto
@@ -484,12 +486,38 @@ def show_end_screen(screen):
         # Desenha o texto
         screen.blit(text, text_rect)
 
+        restart_button_rect = draw_button(
+            screen, "Restart", screen.get_width() // 2 - 150 // 2, screen.get_height() // 2 + 50, 
+            200, 75, (25, 177, 76), (0, 255, 0)  # Cores do botão
+        )
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False  # Encerra o jogo
+            elif event.type == pygame.MOUSEBUTTONDOWN and restart_button_rect.collidepoint(event.pos):
+                  restart_game(player)
 
         pygame.display.update()
 
+
+def restart_game(player):
+    global level, level_map, tile_group
+    level = 1  
+    path = f'level{level}.txt'
+    print(f"Carregando {path}...")
+ 
+    level_map = load_level_from_file(path)
+  
+    tile_group.empty()
+
+    draw_map(screen, tile_group)
+
+    player.reset_position(100, 10)  
+    player.lives = 3 
+    pygame.mixer.music.load("assets/sounds/song2.mp3")
+    pygame.mixer.music.play(-1)
+    
+    main(screen)
 
 # Função principal
 def main(screen):
@@ -501,6 +529,7 @@ def main(screen):
         
         # Desenha o fundo na tela
         screen.blit(bg, (0, 0))  # Desenha a imagem do fundo na posição (0, 0)
+        draw_info(screen,"level "+ str(level) , sys_font, 250,10)
         clock.tick(fps)
         dt = clock.get_time()
 
@@ -535,7 +564,8 @@ def main(screen):
         draw_map(screen, tile_group)
         draw(screen, player)
 
-        draw_lives(screen, player.lives, sys_font)
+        draw_info(screen, "Lives "+ str(player.lives), sys_font,10,10)
+        draw_info(screen,"level "+ str(level) , sys_font, 250,10)
         pygame.display.update()
 
         # Evento de fechar a janela
