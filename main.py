@@ -18,7 +18,9 @@ pygame.display.set_caption('Astronaut Adventures')
 fps = 60
 PLAYER_VEL = 10
 timer = pygame.time.Clock()
-global level, path
+global level, path, damage_timer, eActive
+eActive = False
+damage_timer = 0
 level = 1
 
 def flip(sprites):
@@ -60,6 +62,64 @@ class Tile(pygame.sprite.Sprite):
     def update(self):
         #Implementar comportamentos do tile
         pass
+
+class Enemy(pygame.sprite.Sprite):
+    COLOR = (255, 0, 0)
+    GRAVITY = 5
+    SPRITES = load_sprite_sheets("images", "enemy", 32, 32, True)
+    ANIMATION_DELAY = 5
+
+    def __init__(self, x, y, width, height):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.vel_x = 0
+        self.vel_y = 0
+        self.mask = None
+        self.direction = "left"
+        self.animation_count = 0
+    
+    def reset_position(self, x, y):
+        self.rect.x = x
+        self.rect.y = y
+        self.lives = self.LIVES  # Restaura as vidas ao reiniciar
+        self.dead = False  # O jogador revive
+
+    def move(self, dx, dy):
+        self.rect.x += dx
+        self.rect.y += dy
+
+    def move_left(self, vel):
+        self.vel_x = -vel
+        if self.direction != "left":
+            self.direction = "left"
+            self.animation_count = 0
+    
+    def move_right(self, vel):
+        self.vel_x = vel
+        if self.direction != "right":
+            self.direction = "right"
+            self.animation_count = 0
+
+    def loop(self, fps):
+        self.move(self.vel_x, self.vel_y)
+        self.update_sprite()
+
+    def update_sprite(self):
+        sprite_sheet = "enemy"
+        if self.vel_x != 0:
+            sprite_sheet ="eWalk"
+
+        sprite_sheet_name = sprite_sheet + "_"+ self.direction
+        sprites = self.SPRITES[sprite_sheet_name]
+        sprite_index = (self.animation_count // self.ANIMATION_DELAY) % len(sprites)
+        self.sprite = sprites[sprite_index]
+        self.animation_count += 1
+        
+    def update(self):
+        self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
+        self.mask = pygame.mask.from_surface(self.sprite)
+
+    def draw(self, win):
+        win.blit(self.sprite, (self.rect.x, self.rect.y))
 
 class Player(pygame.sprite.Sprite):
     COLOR = (255, 0, 0)
@@ -158,7 +218,7 @@ class Player(pygame.sprite.Sprite):
             print(f"Inventário de chaves: {self.key_counts}")
 
     
-    def open_doors(self, door_type, tile):
+    def open_doors(self, door_type, tile, enemy):
         audiodoor.play()
         global level, path, level_map, tile_group
         # Mapeia os tipos de porta com suas respectivas chaves
@@ -196,7 +256,11 @@ class Player(pygame.sprite.Sprite):
                     draw_map(screen, tile_group)  # Recarrega o grupo de tiles no novo nível
 
                     # Reposicionar o jogador
-                    self.rect.x, self.rect.y = 230, 620
+                    self.rect.x, self.rect.y = 210, 620
+                    if level == 4:
+                        enemy.rect.x, enemy.rect.y = 740, 335
+                    elif level == 5:
+                        enemy.rect.x, enemy.rect.y = 840, 335
                     print(f"Jogador transportado para ({self.rect.x}, {self.rect.y})")
 
                 else:
@@ -275,6 +339,24 @@ def collide(player, objects, dx):
     player.move(-(1.3*dx),0)
     player.update()
     return collided_object
+
+def ecollide(enemy, player):
+    global eActive, damage_timer
+    current_time = pygame.time.get_ticks()
+    # Atualiza as máscaras para garantir que estejam sincronizadas com as imagens
+    enemy.update()
+    player.update()
+
+    # Verifica colisão entre o inimigo e o jogador usando máscaras
+    if pygame.sprite.collide_mask(enemy, player) and eActive == True and (current_time - damage_timer >= 300):
+        damage_timer = current_time
+        player.lives -= 1
+        print(f"Colisão com inimigo! Vidas restantes: {player.lives}")
+        return True  # Retorna True para indicar que houve colisão
+
+    return False  # Retorna False caso não haja colisão
+
+
                 
 def handle_move(player, objects):
     keys = pygame.key.get_pressed()
@@ -289,6 +371,15 @@ def handle_move(player, objects):
         player.move_right(PLAYER_VEL)
 
     handle_vertical_collision(player, objects, player.vel_y)
+
+def ehandle_move(enemy, etimer, player):
+    enemy.vel_x = 0
+    ecollide(enemy, player)
+ 
+    if etimer > 0 and etimer < 10:
+        enemy.move_left(PLAYER_VEL/2)
+    elif etimer > 10:
+        enemy.move_right(PLAYER_VEL/2)
     
 def load_level_from_file(file_path):
     level_map = []
@@ -413,7 +504,7 @@ def check_collectibles(player, tile_group, proximity_threshold=20):
                 level_map[tile.row][tile.col] = 0  # Remove do mapa
 
 
-def check_doors(player, tile_group, proximity_threshold=20):
+def check_doors(player, tile_group, enemy, proximity_threshold=20):
     player.update()  # Atualiza a máscara do jogador
     player_rect = player.rect  # Retângulo que representa a posição do jogador
     for tile in tile_group:
@@ -421,13 +512,13 @@ def check_doors(player, tile_group, proximity_threshold=20):
             tile_rect = tile.rect  # Retângulo do item
             if pygame.sprite.collide_mask(player, tile):
                 print(f"Abrindo porta {tile.type}")
-                player.open_doors(tile.type, tile)  # Adiciona ao inventário do jogador
+                player.open_doors(tile.type, tile, enemy)  # Adiciona ao inventário do jogador
                 continue
 
             # Verifica proximidade: se o jogador está dentro do raio de proximidade do item
             if player_rect.colliderect(tile_rect.inflate(proximity_threshold, proximity_threshold)):
                 # Aproxime a detecção, se o jogador estiver perto do item, colete-o
-                player.open_doors(tile.type, tile)  # Adiciona ao inventário do jogador
+                player.open_doors(tile.type, tile, enemy)  # Adiciona ao inventário do jogador
 
                 
 def draw_button(screen, text, x, y, width_button, height_button, color, hover_color):
@@ -521,10 +612,16 @@ def restart_game(player):
 
 # Função principal
 def main(screen):
-    global clock,level,level_map 
+    global clock,level,level_map, eActive
     running = True
-    player = Player(230, 620, 50, 50)
+    player = Player(210, 620, 50, 50)
+    enemy = Enemy(640, 335, 50, 50)
+    etimer = 0
     while running:
+        if etimer < 19:
+            etimer += 1
+        else:
+            etimer = 0
         screen.fill('black')  # Limpa a tela com a cor preta
         
         # Desenha o fundo na tela
@@ -535,11 +632,15 @@ def main(screen):
 
         player.loop(fps)
         handle_move(player, tile_group)
+        enemy.loop(fps)
+        ehandle_move(enemy, etimer, player)
         
         # Verificar coleta de itens
         check_collectibles(player, tile_group)
 
-        check_doors(player, tile_group)
+        check_doors(player, tile_group, enemy)
+        if player.lives <= 0:
+            player.dead = True
         if player.dead or player.rect.right < 0 or player.rect.left > 1800:
         # Mostra uma mensagem de "Game Over" e reinicia o jogo
             game_over_text = sys_font.render("Game Over", True, (255, 0, 0))
@@ -563,6 +664,17 @@ def main(screen):
         # Desenha o mapa com os tiles
         draw_map(screen, tile_group)
         draw(screen, player)
+        if level == 3:
+            draw(screen, enemy)
+            eActive = True
+        elif level == 4:
+            draw(screen, enemy)
+            eActive = True
+        elif level == 5:
+            draw(screen, enemy)
+            eActive = True
+        else:
+            eActive = False
 
         draw_info(screen, "Lives "+ str(player.lives), sys_font,10,10)
         draw_info(screen,"level "+ str(level) , sys_font, 250,10)
