@@ -1,3 +1,8 @@
+# Breno Gallo - 2110183
+# Thiago Von - 2420001
+# Pedro Martins - 2320743
+# Kalline Barreto - 2320623
+
 import pygame
 from os import listdir
 from os.path import join, isfile
